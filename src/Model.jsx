@@ -95,7 +95,7 @@ export default function ModelViewer() {
       <div style={{ position: "sticky", top: 0, height: "100vh" }}>
         <Canvas shadows camera={{ position: [5, 3.5, 0], fov: 40 }} >
           <ambientLight intensity={0.1} />
-          <spotLight
+          {/* <spotLight
             position={[0, 10, 0]}
             angle={0.15}
             penumbra={1}
@@ -115,13 +115,13 @@ export default function ModelViewer() {
             shadow-mapSize-width={1024}
             shadow-mapSize-height={1024}
           />
-          <directionalLight position={[5, 10, 0]} intensity={5} />
+          <directionalLight position={[5, 10, 0]} intensity={5} /> */}
 
           {/* Ground Plane */}
-          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.07, 0]} receiveShadow>
+          {/* <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.07, 0]} receiveShadow>
             <planeGeometry args={[20, 20]} />
             <meshStandardMaterial color="white" roughness={0} />
-          </mesh>
+          </mesh> */}
 
           {/* Model */}
           <Suspense fallback={null}>
