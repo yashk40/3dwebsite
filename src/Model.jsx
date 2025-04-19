@@ -1,62 +1,53 @@
 "use client"
 import { Canvas } from "@react-three/fiber"
-import { useGLTF, OrbitControls, useDetectGPU, AdaptiveDpr, Preload } from "@react-three/drei"
+import { useGLTF, OrbitControls, useDetectGPU } from "@react-three/drei"
 import { Suspense, useRef, useEffect, useState } from "react"
 import { gsap } from "gsap"
 import { ScrollTrigger } from "gsap/ScrollTrigger"
 
 gsap.registerPlugin(ScrollTrigger)
 
-// Loading component to show while the model loads
-function LoadingScreen() {
-  return (
-    <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-80">
-      <div className="text-center">
-        <div className="w-12 h-12 border-4 border-t-blue-500 border-gray-200 rounded-full animate-spin mx-auto mb-4"></div>
-        <p className="text-gray-700">Loading 3D Model...</p>
-      </div>
-    </div>
-  )
-}
+// Text sections about Porsche
+const porscheInfo = [
+  {
+    title: "Racing Heritage",
+    description: "Built on decades of motorsport success, the GT3 RS brings race-proven technology to the street.",
+  },
+]
 
 function Model({ url, isMobile }) {
-  const { scene } = useGLTF(url, true) // true enables progressive loading
+  const { scene } = useGLTF(url)
   const modelRef = useRef()
+  const gpuTier = useDetectGPU()
 
   // Setup scroll animation to rotate the model
   useEffect(() => {
-    if (!modelRef.current) return
+    if (modelRef.current) {
+      // Reset rotation to 0
+      modelRef.current.rotation.y = 0
+      modelRef.current.rotation.z = 0
+      modelRef.current.position.y = 0
 
-    // Reset rotation to initial state
-    modelRef.current.rotation.y = 0
-    modelRef.current.rotation.z = 0
-    modelRef.current.position.y = 0
-
-    // Create the scroll animation with better control
-    const tl = gsap.timeline({
-      scrollTrigger: {
-        trigger: "#scroll-trigger",
-        start: "top top",
-        end: "bottom bottom",
-        scrub: isMobile ? 0.5 : 1, // faster scrub on mobile for better performance
-        invalidateOnRefresh: true,
-        markers: false,
-        onLeaveBack: () => {
-          if (modelRef.current) {
-            gsap.set(modelRef.current.rotation, { y: 0 })
-          }
+      // Create the scroll animation with better control
+      const tl = gsap.timeline({
+        scrollTrigger: {
+          trigger: "#scroll-trigger",
+          start: "top top",
+          end: "bottom bottom",
+          scrub: 1,
+          invalidateOnRefresh: true,
+          markers: false,
+          onEnter: () => console.log("Animation started"),
+          onLeaveBack: () => {
+            // Reset to 0 when scrolling back to the top
+            if (modelRef.current) {
+              gsap.set(modelRef.current.rotation, { y: 0 })
+            }
+          },
         },
-      },
-    })
-
-    // Simpler animation for mobile
-    if (isMobile) {
-      tl.to(modelRef.current.rotation, {
-        y: 2,
-        ease: "none",
       })
-    } else {
-      // More complex animation for desktop
+
+      // Add the rotation animation to the timeline
       tl.to(modelRef.current.position, {
         x: 0.5,
         ease: "none",
@@ -65,134 +56,181 @@ function Model({ url, isMobile }) {
         y: 2,
         ease: "none",
       })
-    }
 
-    // Cleanup function
-    return () => {
-      if (tl.scrollTrigger) {
-        tl.scrollTrigger.kill()
+      // Cleanup function
+      return () => {
+        if (tl.scrollTrigger) {
+          tl.scrollTrigger.kill()
+        }
       }
     }
-  }, [isMobile])
+  }, [])
 
-  // Enable shadows on model - only on desktop
+  // Enable shadows on model with optimization for mobile
   useEffect(() => {
     scene.traverse((child) => {
       if (child.isMesh) {
-        child.castShadow = !isMobile
-        child.receiveShadow = !isMobile
-
-        // Optimize materials for mobile
-        if (isMobile && child.material) {
-          child.material.roughness = 0.7 // Higher roughness = less complex reflections
-          child.material.metalness = 0.3 // Lower metalness = less complex reflections
-          child.material.envMapIntensity = 0.5 // Lower environment map intensity
+        // Reduce shadow quality on mobile or low-end devices
+        if (isMobile || (gpuTier && gpuTier.tier < 2)) {
+          child.castShadow = false
+          child.receiveShadow = false
+        } else {
+          child.castShadow = true
+          child.receiveShadow = true
         }
       }
     })
-  }, [scene, isMobile])
+  }, [scene, isMobile, gpuTier])
 
-  // Calculate model scale based on device
   const modelScale = isMobile ? 0.5 : 1
 
   return <primitive object={scene} ref={modelRef} scale={modelScale} />
 }
 
-export default function ModelViewer() {
-  const [isMobile, setIsMobile] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
-  const gpuTier = useDetectGPU()
+function TextSection({ section, index }) {
+  const textRef = useRef()
 
   useEffect(() => {
-    // Detect mobile devices by screen width and GPU capabilities
-    const checkMobile = () => {
-      const width = window.innerWidth
-      const isMobileDevice = width < 768 || (gpuTier && gpuTier.tier < 2)
-      setIsMobile(isMobileDevice)
+    const el = textRef.current
+
+    if (el) {
+      gsap.fromTo(
+        el,
+        {
+          opacity: 0,
+          x: index % 2 === 0 ? -50 : 50,
+        },
+        {
+          opacity: 1,
+          x: 0,
+          scrollTrigger: {
+            trigger: el,
+            start: "top 80%",
+            end: "bottom 60%",
+            scrub: 1,
+            toggleActions: "play none none reverse",
+          },
+        },
+      )
     }
 
-    checkMobile()
-    window.addEventListener("resize", checkMobile)
+    return () => {
+      ScrollTrigger.getAll().forEach((trigger) => {
+        if (trigger.vars.trigger === el) {
+          trigger.kill()
+        }
+      })
+    }
+  }, [index])
 
-    return () => window.removeEventListener("resize", checkMobile)
-  }, [gpuTier])
+  return (
+    <div
+      ref={textRef}
+      className={`text-section ${index % 2 === 0 ? "text-left ml-8" : "text-right mr-8"}`}
+      style={{
+        position: "absolute",
+        top: `${25 + index * 20}%`,
+        left: index % 2 === 0 ? "5%" : "auto",
+        right: index % 2 === 0 ? "auto" : "5%",
+        maxWidth: "40%",
+        padding: "20px",
+        backgroundColor: "rgba(0, 0, 0, 0.7)",
+        color: "white",
+        borderRadius: "8px",
+        opacity: 0,
+      }}
+    >
+      <h2 className="text-xl md:text-2xl font-bold mb-2">{section.title}</h2>
+      <p className="text-sm md:text-base">{section.description}</p>
+    </div>
+  )
+}
 
-  // Handle model loading state
+export default function ModelViewer() {
+  const [isMobile, setIsMobile] = useState(false)
+
   useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 1500)
-    return () => clearTimeout(timer)
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768)
+    }
+
+    handleResize() // call once on mount
+    window.addEventListener("resize", handleResize)
+
+    return () => window.removeEventListener("resize", handleResize)
   }, [])
 
   return (
-    <div id="scroll-trigger" style={{ width: "100vw", height: "200vh" }}>
+    <div id="scroll-trigger" style={{ width: "100vw", height: "300vh", position: "relative" }}>
+      {/* Make canvas sticky to see scroll effect clearly */}
       <div style={{ position: "sticky", top: 0, height: "100vh" }}>
-        {isLoading && <LoadingScreen />}
-
         <Canvas
-          shadows={!isMobile}
-          camera={{
-            position: isMobile ? [6, 4, 0] : [5, 3.5, 0],
-            fov: isMobile ? 50 : 40,
-          }}
-          dpr={isMobile ? 1 : Math.min(window.devicePixelRatio, 1.5)}
-          performance={{ min: 0.5 }}
-          gl={{
-            powerPreference: "high-performance",
-            antialias: !isMobile,
-            stencil: false,
-            depth: true,
-          }}
+          shadows
+          camera={{ position: [5, 3.5, 0], fov: 40 }}
+          dpr={isMobile ? [1, 1.5] : [1, 2]} // Lower resolution on mobile
+          performance={{ min: 0.5 }} // Allow ThreeJS to reduce quality if needed
         >
-          {/* Adaptive DPR adjusts resolution based on device performance */}
-          <AdaptiveDpr pixelated />
+          <ambientLight intensity={0.1} />
+          <spotLight
+            position={[0, 10, 0]}
+            angle={0.15}
+            penumbra={1}
+            color="white"
+            intensity={63}
+            castShadow={!isMobile}
+            shadow-mapSize-width={isMobile ? 512 : 1024}
+            shadow-mapSize-height={isMobile ? 512 : 1024}
+            shadow-camera-near={0.5}
+            shadow-camera-far={5}
+          />
+          <pointLight position={[0, 10, 0]} intensity={72} />
+          <directionalLight
+            position={[0, 10, -3]}
+            intensity={32}
+            castShadow={!isMobile}
+            shadow-mapSize-width={isMobile ? 512 : 1024}
+            shadow-mapSize-height={isMobile ? 512 : 1024}
+          />
+          <directionalLight position={[5, 10, 0]} intensity={5} />
 
-          {/* Simplified lighting for mobile */}
-          <ambientLight intensity={isMobile ? 0.5 : 0.1} />
-
-          {/* Conditional lighting based on device */}
-          {!isMobile ? (
-            <>
-              <spotLight
-                position={[0, 10, 0]}
-                angle={0.15}
-                penumbra={1}
-                color="white"
-                intensity={63}
-                castShadow
-                shadow-mapSize-width={1024}
-                shadow-mapSize-height={1024}
-              />
-              <pointLight position={[0, 10, 0]} intensity={72} />
-              <directionalLight
-                position={[0, 10, -3]}
-                intensity={32}
-                castShadow
-                shadow-mapSize-width={1024}
-                shadow-mapSize-height={1024}
-              />
-              <directionalLight position={[5, 10, 0]} intensity={5} />
-            </>
-          ) : (
-            // Simplified lighting for mobile
-            <directionalLight position={[5, 10, 5]} intensity={2} castShadow={false} />
-          )}
-
-          {/* Ground Plane - simplified for mobile */}
+          {/* Ground Plane */}
           <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.07, 0]} receiveShadow={!isMobile}>
             <planeGeometry args={[20, 20]} />
-            <meshStandardMaterial color="white" roughness={isMobile ? 1 : 0} metalness={0} />
+            <meshStandardMaterial color="white" roughness={0} />
           </mesh>
 
-          {/* Model with Suspense for async loading */}
+          {/* Model */}
           <Suspense fallback={null}>
             <Model url="/porsche_gt3_rs.glb" isMobile={isMobile} />
           </Suspense>
 
-          <OrbitControls enableDamping={false} enableRotate={false} enableZoom={false} enablePan={false} />
-
-          {/* Preload assets for better performance */}
-          <Preload all />
+          <OrbitControls enableDamping={false} enableRotate={false} enableZoom={false} />
         </Canvas>
+
+        {/* Text sections that appear on scroll */}
+        {porscheInfo.map((section, index) => (
+          <TextSection key={index} section={section} index={index} />
+        ))}
+      </div>
+
+      {/* Title that appears at the top */}
+      <div
+        style={{
+          position: "absolute",
+          top: "5%",
+          left: "50%",
+          transform: "translateX(-50%)",
+          textAlign: "center",
+          color: "white",
+          zIndex: 10,
+        }}
+      >
+        <h1 className="text-3xl md:text-5xl font-bold" style={{ textShadow: "2px 2px 4px rgba(0,0,0,0.5)" }}>
+          Porsche GT3 RS
+        </h1>
+        <p className="text-lg md:text-xl mt-2" style={{ textShadow: "1px 1px 2px rgba(0,0,0,0.5)" }}>
+          Scroll to explore
+        </p>
       </div>
     </div>
   )
