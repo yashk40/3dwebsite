@@ -93,7 +93,7 @@ export default function ModelViewer() {
     <div id="scroll-trigger" style={{ width: "100vw", height: "200vh" }}>
       {/* Make canvas sticky to see scroll effect clearly */}
       <div style={{ position: "sticky", top: 0, height: "100vh" }}>
-        <Canvas shadows camera={{ position: [5, 3.5, 0], fov: 40 }} >
+        <Canvas shadows camera={{ position: [5, 3.5, 0], fov: 40 }} dpr={Math.min(window.devicePixelRatio, 1.5)} >
           <ambientLight intensity={0.1} />
           <spotLight
             position={[0, 10, 0]}
