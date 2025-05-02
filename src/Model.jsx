@@ -138,7 +138,7 @@ export default function ModelViewer() {
 
           {/* Model */}
           <Suspense fallback={null}>
-            <Model url="/porsche_gt3_rs.compressed.glb" isMobile={isMobile} />
+            <Model url="/porsche_911_930_turbo_1975.glb" isMobile={isMobile} />
           </Suspense>
 
           <OrbitControls enableDamping={false} enableRotate={false} enableZoom={false} />
