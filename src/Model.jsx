@@ -103,7 +103,7 @@ export default function ModelViewer() {
           camera={{ position: [5, 3.5, 0], fov: 40 }}
           dpr={isMobile ? 1 : window.devicePixelRatio} // Lower resolution on mobile
         >
-          <ambientLight intensity={isMobile ? 0.5 : 0.1} />
+          {/* <ambientLight intensity={isMobile ? 0.5 : 0.1} />
           {!isMobile && (
             <spotLight
               position={[0, 10, 0]}
@@ -128,7 +128,7 @@ export default function ModelViewer() {
               shadow-mapSize-height={512}
             />
           )}
-          <directionalLight position={[5, 10, 0]} intensity={isMobile ? 10 : 5} />
+          <directionalLight position={[5, 10, 0]} intensity={isMobile ? 10 : 5} /> */}
 
           {/* Ground Plane */}
           {/* <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.07, 0]} receiveShadow>
